@@ -2,10 +2,16 @@ import dash
 from dash import dcc, html, Input, Output
 import pandas as pd
 import io
+import os
 import base64
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
+import hashlib
+import smtplib
+from email.message import EmailMessage
+
+uploaded_file_hashes = set()
 
 # Инициализация Dash
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
@@ -37,6 +43,8 @@ CONTAINER_STYLE = {
     'boxShadow': '0px 4px 8px rgba(0, 0, 0, 0.1)',
     'margin': '20px'
 }
+
+
 
 # Навигационное меню
 navigation_menu = html.Div([
@@ -72,6 +80,7 @@ data_upload_layout = html.Div([
     html.Div(id="upload-status")
 ])
 
+
 # Страница "General Results"
 general_results_layout = html.Div([
     navigation_menu,
@@ -100,6 +109,10 @@ sessions_layout = html.Div([
     html.Div(id="sessions-output-graphs")
 ])
 
+def calculate_file_hash(file_contents):
+    return hashlib.sha256(file_contents.encode('utf-8')).hexdigest()
+
+
 
 # Функция для обработки данных
 def preprocess_data(data):
@@ -127,19 +140,65 @@ def preprocess_data(data):
 
     return data
 
+def send_email_with_file(file_path, recipient_email="gordejgodunov@gmail.com"):
+
+    msg = EmailMessage()
+    msg['Subject'] = 'New Uploaded CSV File'
+    msg['From'] = 'gordejgodunov@gmail.com'
+    msg['To'] = recipient_email
+
+    with open(file_path, 'rb') as f:
+        file_data = f.read()
+        file_name = file_path.split('/')[-1]
+
+    msg.add_attachment(file_data, maintype='application', subtype='csv', filename=file_name)
+
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+        server.login("gordejgodunov@gmail.com", "4wvoLmM'E"x4D!9$")
+        server.send_message(msg)
+
+
+
 
 # Callback для обработки загруженного файла
-def parse_contents(contents):
+def parse_contents(contents, filename):
+    global uploaded_file_hashes
+
     try:
         content_type, content_string = contents.split(',')
-    except ValueError:
-        raise ValueError("Unexpected format of uploaded file. Please ensure the file is a CSV.")
+        decoded = base64.b64decode(content_string)
+        file_contents = decoded.decode('utf-8')
 
-    decoded = base64.b64decode(content_string)
-    decoded_io = io.StringIO(decoded.decode('utf-8'))
-    data = pd.read_csv(decoded_io)
-    return preprocess_data(data)
+        # Вычисляем хэш файла
+        file_hash = calculate_file_hash(file_contents)
+        if file_hash in uploaded_file_hashes:
+            return html.Div(f"The file '{filename}' has already been uploaded")
 
+        # Сохраняем хэш файла
+        uploaded_file_hashes.add(file_hash)
+
+        # Генерируем уникальное имя файла на основе хэша
+        unique_filename = f'{file_hash}_{filename}'
+        save_path = f'tmp/{unique_filename}'
+        os.makedirs('tmp', exist_ok=True)
+
+        # Сохраняем файл на диск
+        with open(save_path, 'w') as f:
+            f.write(file_contents)
+
+        # Отправляем файл на email
+        send_email_with_file(save_path)
+
+
+
+        decoded = base64.b64decode(content_string)
+        decoded_io = io.StringIO(decoded.decode('utf-8'))
+        data = pd.read_csv(decoded_io)
+
+        return preprocess_data(data)
+
+except ValueError:
+    raise ValueError("Unexpected format of uploaded file. Please ensure the file is a CSV.")
 
 # Функции для генерации графиков
 
