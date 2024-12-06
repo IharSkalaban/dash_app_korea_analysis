@@ -197,8 +197,8 @@ def parse_contents(contents, filename):
 
         return preprocess_data(data)
 
-except ValueError:
-    raise ValueError("Unexpected format of uploaded file. Please ensure the file is a CSV.")
+    except ValueError:
+        raise ValueError("Unexpected format of uploaded file. Please ensure the file is a CSV.")
 
 # Функции для генерации графиков
 
