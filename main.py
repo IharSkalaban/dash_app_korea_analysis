@@ -165,9 +165,12 @@ def parse_contents(contents, filename):
     global uploaded_file_hashes
 
     try:
+        print("Загрузка начата...")  # Добавьте отладочный вывод
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
+        print("Файл декодирован")
         file_contents = decoded.decode('utf-8')
+        print(f"Файл успешно прочитан: {filename}")
 
         # Вычисляем хэш файла
         file_hash = calculate_file_hash(file_contents)
@@ -185,6 +188,7 @@ def parse_contents(contents, filename):
         # Сохраняем файл на диск
         with open(save_path, 'w') as f:
             f.write(file_contents)
+        print(f"Файл сохранен по пути: {save_path}")
 
         # Отправляем файл на email
         send_email_with_file(save_path)
@@ -197,7 +201,8 @@ def parse_contents(contents, filename):
 
         return preprocess_data(data)
 
-    except ValueError:
+    except  Exception as e:
+        print(f"Ошибка: {e}")
         raise ValueError("Unexpected format of uploaded file. Please ensure the file is a CSV.")
 
 # Функции для генерации графиков
@@ -1243,9 +1248,12 @@ def update_data_upload(contents):
             ], style={'textAlign': 'center'})
         ])
     try:
+        print("Началась обработка файла")
         global_data = parse_contents(contents)
+        print("Данные сохранены в глобальную переменную")
         return html.Div("File uploaded successfully! You can now navigate to other pages to view the graphs.")
     except ValueError as e:
+        print(f"Ошибка: {e}")
         return html.Div(f"Error processing file: {e}")
 
 
