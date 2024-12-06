@@ -56,7 +56,7 @@ data_upload_layout = html.Div([
     html.H1("Data Upload", style=HEADER_STYLE),
     dcc.Upload(
         id="upload-data",
-        children=html.Div(["Drag and Drop or ", html.A("Select a File")]),
+        children=html.Div(["Drag and Drop or ", html.A("Select a File  *.csv format ")]),
         style={
             "width": "100%",
             "height": "60px",
