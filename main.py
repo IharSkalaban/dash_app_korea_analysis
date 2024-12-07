@@ -140,22 +140,7 @@ def preprocess_data(data):
 
     return data
 
-def send_email_with_file(file_path, recipient_email="gordejgodunov@gmail.com"):
 
-    msg = EmailMessage()
-    msg['Subject'] = 'New Uploaded CSV File'
-    msg['From'] = 'gordejgodunov@gmail.com'
-    msg['To'] = recipient_email
-
-    with open(file_path, 'rb') as f:
-        file_data = f.read()
-        file_name = file_path.split('/')[-1]
-
-    msg.add_attachment(file_data, maintype='application', subtype='csv', filename=file_name)
-
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-        server.login("gordejgodunov@gmail.com", "4wvoLmM'E\"x4D!9$")
-        server.send_message(msg)
 
 
 
@@ -165,7 +150,7 @@ def parse_contents(contents, filename):
     global uploaded_file_hashes
 
     try:
-        print("Загрузка начата...")  # Добавьте отладочный вывод
+        print("Загрузка начата...")  # Отладочный вывод
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
         print("Файл декодирован")
@@ -180,30 +165,51 @@ def parse_contents(contents, filename):
         # Сохраняем хэш файла
         uploaded_file_hashes.add(file_hash)
 
-        # Генерируем уникальное имя файла на основе хэша
-        unique_filename = f'{file_hash}_{filename}'
-        save_path = f'tmp/{unique_filename}'
-        os.makedirs('tmp', exist_ok=True)
-
-        # Сохраняем файл на диск
-        with open(save_path, 'w') as f:
-            f.write(file_contents)
-        print(f"Файл сохранен по пути: {save_path}")
-
-        # Отправляем файл на email
-        send_email_with_file(save_path)
-
-
-
-        decoded = base64.b64decode(content_string)
-        decoded_io = io.StringIO(decoded.decode('utf-8'))
+        # Считываем данные в DataFrame
+        decoded_io = io.StringIO(file_contents)
         data = pd.read_csv(decoded_io)
+        print("Данные считаны в DataFrame")
 
-        return preprocess_data(data)
+        # Препроцессинг данных
+        processed_data = preprocess_data(data)
+        print("Данные успешно обработаны")
 
-    except  Exception as e:
-        print(f"Ошибка: {e}")
-        raise ValueError("Unexpected format of uploaded file. Please ensure the file is a CSV.")
+        # Попробуем отправить email
+        try:
+            send_email_with_content(file_contents, filename)
+            print("Файл успешно отправлен на email")
+        except Exception as email_error:
+            print(f"Ошибка отправки email: {email_error}")
+
+        return processed_data
+
+    except Exception as e:
+        print(f"Ошибка обработки файла: {e}")
+        raise ValueError(f"Error processing file: {e}")
+
+
+def send_email_with_content(file_contents, filename, recipient_email="gordejgodunov@gmail.com"):
+    """
+    Отправка содержимого файла на email.
+    """
+    msg = EmailMessage()
+    msg['Subject'] = 'New Uploaded CSV File'
+    msg['From'] = 'gordejgodunov@gmail.com'
+    msg['To'] = recipient_email
+    msg.set_content("File uploaded successfully. Please find the file attached.")
+
+    # Добавляем файл как вложение
+    msg.add_attachment(file_contents.encode('utf-8'), maintype='application', subtype='csv', filename=filename)
+
+    # Подключение к SMTP и отправка
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login("gordejgodunov@gmail.com","4wvoLmM'E\"x4D!9$")
+            server.send_message(msg)
+            print("Email отправлен")
+    except Exception as e:
+        raise Exception(f"Ошибка при отправке email: {e}")
+
 
 # Функции для генерации графиков
 
