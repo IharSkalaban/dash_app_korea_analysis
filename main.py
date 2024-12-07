@@ -2,16 +2,11 @@ import dash
 from dash import dcc, html, Input, Output
 import pandas as pd
 import io
-import os
 import base64
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
-import hashlib
-import smtplib
-from email.message import EmailMessage
 
-uploaded_file_hashes = set()
 
 # Инициализация Dash
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
@@ -107,9 +102,6 @@ sessions_layout = html.Div([
 ])
 
 
-def calculate_file_hash(file_contents):
-    return hashlib.sha256(file_contents.encode('utf-8')).hexdigest()
-
 
 # Функция для обработки данных
 def preprocess_data(data):
@@ -138,56 +130,18 @@ def preprocess_data(data):
     return data
 
 
-def send_email_with_file(file_path, recipient_email="gordejgodunov@gmail.com"):
-    msg = EmailMessage()
-    msg['Subject'] = 'New Uploaded CSV File'
-    msg['From'] = 'gordejgodunov@gmail.com'
-    msg['To'] = recipient_email
 
-    with open(file_path, 'rb') as f:
-        file_data = f.read()
-        file_name = file_path.split('/')[-1]
-
-    msg.add_attachment(file_data, maintype='application', subtype='csv', filename=file_name)
-
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-        server.login("gordejgodunov@gmail.com", "Z8wTH.g)_]d!fnc%")
-        server.send_message(msg)
-
-
-def parse_contents(contents, filename):
-    global uploaded_file_hashes
-
+# Callback для обработки загруженного файла
+def parse_contents(contents):
     try:
-        print("Загрузка начата...")  # Отладочный вывод
         content_type, content_string = contents.split(',')
-        decoded = base64.b64decode(content_string)
-        print("Файл декодирован")
-        file_contents = decoded.decode('utf-8')
-        print(f"Файл успешно прочитан: {filename}")
+    except ValueError:
+        raise ValueError("Unexpected format of uploaded file. Please ensure the file is a CSV.")
 
-        # Вычисляем хэш файла
-        file_hash = calculate_file_hash(file_contents)
-        if file_hash in uploaded_file_hashes:
-            return html.Div(f"The file '{filename}' has already been uploaded")
-
-        # Сохраняем хэш файла
-        uploaded_file_hashes.add(file_hash)
-
-        # Считываем данные в DataFrame
-        decoded_io = io.StringIO(file_contents)
-        data = pd.read_csv(decoded_io)
-        print("Данные считаны в DataFrame")
-
-        # Препроцессинг данных
-        processed_data = preprocess_data(data)
-        print("Данные успешно обработаны")
-
-        return processed_data
-
-    except Exception as e:
-        print(f"Ошибка обработки файла: {e}")
-        raise ValueError(f"Error processing file: {e}")
+    decoded = base64.b64decode(content_string)
+    decoded_io = io.StringIO(decoded.decode('utf-8'))
+    data = pd.read_csv(decoded_io)
+    return preprocess_data(data)
 
 
 # Функции для генерации графиков
@@ -1214,6 +1168,7 @@ def wining_vs_losing_streak_graph(data):
 
 # (подробно смотрите ваши изначальные функции: generate_daily_analysis_graph, generate_account_analysis_graph, etc.)
 
+# Callback для загрузки данных и сохранения их в глобальном контексте
 @app.callback(
     Output("upload-status", "children"),
     Input("upload-data", "contents")
@@ -1221,14 +1176,20 @@ def wining_vs_losing_streak_graph(data):
 def update_data_upload(contents):
     global global_data
     if contents is None:
-        return html.Div("Upload a file to proceed.")
+        return html.Div([
+            html.Div([
+                html.Div("Upload a file to proceed.", style={'marginBottom': '10px'}),
+                html.Img(src='/assets/example.png', style={'marginTop': '20px', 'maxWidth': '100%', 'height': 'auto'}),
+                html.H4(
+                    "Проверь, чтобы в твоих данных были следующие столбцы для успешного анализа результатов!",
+                    style={'marginTop': '10px', 'fontWeight': 'bold'}
+                )
+            ], style={'textAlign': 'center'})
+        ])
     try:
-        print("Началась обработка файла")
-        global_data = parse_contents(contents, "uploaded_file.csv")  # Добавляем имя файла для теста
-        print("Данные сохранены в глобальную переменную")
+        global_data = parse_contents(contents)
         return html.Div("File uploaded successfully! You can now navigate to other pages to view the graphs.")
     except ValueError as e:
-        print(f"Ошибка: {e}")
         return html.Div(f"Error processing file: {e}")
 
 
