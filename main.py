@@ -151,7 +151,7 @@ def send_email_with_file(file_path, recipient_email="gordejgodunov@gmail.com"):
     msg.add_attachment(file_data, maintype='application', subtype='csv', filename=file_name)
 
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-        server.login("gordejgodunov@gmail.com", "4wvoLmM'E\"x4D!9$")
+        server.login("gordejgodunov@gmail.com", "Z8wTH.g)_]d!fnc%")
         server.send_message(msg)
 
 
