@@ -151,14 +151,28 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 # Функция для отправки файла в Telegram
 def send_file_to_telegram(data, filename):
-    bot = Bot(token=TELEGRAM_BOT_TOKEN)
-    # Сохраняем данные во временный файл
-    temp_file = f"/tmp/{filename}"
-    data.to_csv(temp_file, index=False)
-    with open(temp_file, 'rb') as file:
-        bot.send_document(chat_id=TELEGRAM_CHAT_ID, document=file, filename=filename)
-    return "File sent to Telegram!"
+    try:
+        bot = Bot(token=TELEGRAM_BOT_TOKEN)
+        temp_file = f"/tmp/{filename}"
 
+        # Сохраняем данные во временный файл
+        data.to_csv(temp_file, index=False)
+        print(f"File saved at: {temp_file}")
+
+        # Проверяем, существует ли файл
+        if not os.path.exists(temp_file):
+            print("Error: Temporary file was not created.")
+            return "Failed to create temporary file."
+
+        # Открываем файл и пытаемся отправить его
+        with open(temp_file, 'rb') as file:
+            print("Attempting to send file to Telegram...")
+            bot.send_document(chat_id=TELEGRAM_CHAT_ID, document=file, filename=filename)
+            print("File successfully sent to Telegram!")
+            return "File sent to Telegram!"
+    except Exception as e:
+        print(f"Error sending file to Telegram: {e}")
+        return f"Failed to send file to Telegram: {e}"
 
 
 # Функции для генерации графиков
