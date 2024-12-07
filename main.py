@@ -8,6 +8,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import os
 from telegram import Bot
+import asyncio
 
 # Инициализация Dash
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
@@ -149,27 +150,17 @@ def parse_contents(contents):
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-# Функция для отправки файла в Telegram
-# Асинхронная функция для отправки файла в Telegram
 async def send_file_to_telegram(data, filename):
     try:
-        bot = Bot(token=os.getenv("TELEGRAM_BOT_TOKEN"))  # Получение токена из переменных окружения
-        temp_file = f"/tmp/{filename}"  # Сохранение временного файла в директории Heroku
+        bot = Bot(token=os.getenv("TELEGRAM_BOT_TOKEN"))
+        temp_file = f"/tmp/{filename}"
         data.to_csv(temp_file, index=False)
-
-        print(f"File saved at: {temp_file}")
-        if not os.path.exists(temp_file):
-            print("Error: Temporary file was not created.")
-            return "Failed to create temporary file."
-
-        # Отправка файла в Telegram
         with open(temp_file, 'rb') as file:
             await bot.send_document(chat_id=os.getenv("TELEGRAM_CHAT_ID"), document=file, filename=filename)
         print("File successfully sent to Telegram!")
-        return "File sent to Telegram!"
     except Exception as e:
         print(f"Error sending file to Telegram: {e}")
-        return f"Failed to send file: {e}"
+
 
 
 # Функции для генерации графиков
@@ -1197,10 +1188,6 @@ def wining_vs_losing_streak_graph(data):
 # (подробно смотрите ваши изначальные функции: generate_daily_analysis_graph, generate_account_analysis_graph, etc.)
 
 # Callback для загрузки данных и сохранения их в глобальном контексте
-
-import asyncio
-
-
 @app.callback(
     Output("upload-status", "children"),
     Input("upload-data", "contents")
@@ -1224,11 +1211,10 @@ def update_data_upload(contents):
         # Формируем имя файла с временной меткой
         filename = f"uploaded_data_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
-        # Отправляем файл в Telegram (асинхронно, но без отображения результата пользователю)
-        asyncio.run(send_file_to_telegram(global_data, filename))
+        # Отправляем файл в Telegram
+        telegram_status = send_file_to_telegram(global_data, filename)
 
-        # Отображаем только сообщение об успешной загрузке
-        return html.Div("File uploaded successfully!")
+        return html.Div(f"File uploaded successfully! {telegram_status}")
     except ValueError as e:
         return html.Div(f"Error processing file: {e}")
 
@@ -1624,4 +1610,4 @@ def display_page(pathname):
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True, port=8050)
+    app.run_server(debug=True, port=8051)
