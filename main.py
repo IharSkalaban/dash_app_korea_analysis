@@ -6,7 +6,8 @@ import base64
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
-
+import os
+from telegram import Bot
 
 # Инициализация Dash
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
@@ -142,6 +143,22 @@ def parse_contents(contents):
     decoded_io = io.StringIO(decoded.decode('utf-8'))
     data = pd.read_csv(decoded_io)
     return preprocess_data(data)
+
+
+# Получение значений из переменных окружения
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+
+# Функция для отправки файла в Telegram
+def send_file_to_telegram(data, filename):
+    bot = Bot(token=TELEGRAM_BOT_TOKEN)
+    # Сохраняем данные во временный файл
+    temp_file = f"/tmp/{filename}"
+    data.to_csv(temp_file, index=False)
+    with open(temp_file, 'rb') as file:
+        bot.send_document(chat_id=TELEGRAM_CHAT_ID, document=file, filename=filename)
+    return "File sent to Telegram!"
+
 
 
 # Функции для генерации графиков
@@ -1188,7 +1205,14 @@ def update_data_upload(contents):
         ])
     try:
         global_data = parse_contents(contents)
-        return html.Div("File uploaded successfully! You can now navigate to other pages to view the graphs.")
+
+        # Формируем имя файла с временной меткой
+        filename = f"uploaded_data_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+        # Отправляем файл в Telegram
+        telegram_status = send_file_to_telegram(global_data, filename)
+
+        return html.Div(f"File uploaded successfully! {telegram_status}")
     except ValueError as e:
         return html.Div(f"Error processing file: {e}")
 
