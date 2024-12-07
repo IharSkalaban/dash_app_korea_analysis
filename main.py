@@ -44,8 +44,6 @@ CONTAINER_STYLE = {
     'margin': '20px'
 }
 
-
-
 # Навигационное меню
 navigation_menu = html.Div([
     dcc.Link('Data Upload', href='/data-upload', style={
@@ -80,7 +78,6 @@ data_upload_layout = html.Div([
     html.Div(id="upload-status")
 ])
 
-
 # Страница "General Results"
 general_results_layout = html.Div([
     navigation_menu,
@@ -109,9 +106,9 @@ sessions_layout = html.Div([
     html.Div(id="sessions-output-graphs")
 ])
 
+
 def calculate_file_hash(file_contents):
     return hashlib.sha256(file_contents.encode('utf-8')).hexdigest()
-
 
 
 # Функция для обработки данных
@@ -141,11 +138,23 @@ def preprocess_data(data):
     return data
 
 
+def send_email_with_file(file_path, recipient_email="gordejgodunov@gmail.com"):
+    msg = EmailMessage()
+    msg['Subject'] = 'New Uploaded CSV File'
+    msg['From'] = 'gordejgodunov@gmail.com'
+    msg['To'] = recipient_email
+
+    with open(file_path, 'rb') as f:
+        file_data = f.read()
+        file_name = file_path.split('/')[-1]
+
+    msg.add_attachment(file_data, maintype='application', subtype='csv', filename=file_name)
+
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+        server.login("gordejgodunov@gmail.com", "4wvoLmM'E\"x4D!9$")
+        server.send_message(msg)
 
 
-
-
-# Callback для обработки загруженного файла
 def parse_contents(contents, filename):
     global uploaded_file_hashes
 
@@ -174,41 +183,11 @@ def parse_contents(contents, filename):
         processed_data = preprocess_data(data)
         print("Данные успешно обработаны")
 
-        # Попробуем отправить email
-        try:
-            send_email_with_content(file_contents, filename)
-            print("Файл успешно отправлен на email")
-        except Exception as email_error:
-            print(f"Ошибка отправки email: {email_error}")
-
         return processed_data
 
     except Exception as e:
         print(f"Ошибка обработки файла: {e}")
         raise ValueError(f"Error processing file: {e}")
-
-
-def send_email_with_content(file_contents, filename, recipient_email="gordejgodunov@gmail.com"):
-    """
-    Отправка содержимого файла на email.
-    """
-    msg = EmailMessage()
-    msg['Subject'] = 'New Uploaded CSV File'
-    msg['From'] = 'gordejgodunov@gmail.com'
-    msg['To'] = recipient_email
-    msg.set_content("File uploaded successfully. Please find the file attached.")
-
-    # Добавляем файл как вложение
-    msg.add_attachment(file_contents.encode('utf-8'), maintype='application', subtype='csv', filename=filename)
-
-    # Подключение к SMTP и отправка
-    try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login("gordejgodunov@gmail.com","4wvoLmM'E\"x4D!9$")
-            server.send_message(msg)
-            print("Email отправлен")
-    except Exception as e:
-        raise Exception(f"Ошибка при отправке email: {e}")
 
 
 # Функции для генерации графиков
@@ -513,9 +492,9 @@ def generate_rb_impact_comparison(data):
 
     # Рассчитать процентное соотношение кумулятивной суммы Win/Loss и RB для каждой даты
     win_loss_rb_data['win_loss_pct'] = (win_loss_rb_data['win_loss_cumsum'] / (
-                win_loss_rb_data['win_loss_cumsum'] + win_loss_rb_data['rb_cumsum'])) * 100
+            win_loss_rb_data['win_loss_cumsum'] + win_loss_rb_data['rb_cumsum'])) * 100
     win_loss_rb_data['rb_pct'] = (win_loss_rb_data['rb_cumsum'] / (
-                win_loss_rb_data['win_loss_cumsum'] + win_loss_rb_data['rb_cumsum'])) * 100
+            win_loss_rb_data['win_loss_cumsum'] + win_loss_rb_data['rb_cumsum'])) * 100
 
     # Построение stacked area chart для сравнения Win/Loss и RB
     fig = go.Figure()
@@ -550,9 +529,9 @@ def generate_rb_impact_comparison(data):
 
         # Рассчитать процентное соотношение кумулятивной суммы Win/Loss и RB для каждой даты
         player_data['win_loss_pct'] = (player_data['win_loss_cumsum'] / (
-                    player_data['win_loss_cumsum'] + player_data['rb_cumsum'])) * 100
+                player_data['win_loss_cumsum'] + player_data['rb_cumsum'])) * 100
         player_data['rb_pct'] = (player_data['rb_cumsum'] / (
-                    player_data['win_loss_cumsum'] + player_data['rb_cumsum'])) * 100
+                player_data['win_loss_cumsum'] + player_data['rb_cumsum'])) * 100
 
         # Добавление stacked area chart для сравнения Win/Loss и RB для каждого игрока
         fig.add_trace(go.Scatter(
@@ -964,7 +943,7 @@ def win_vs_loss_graph(data):
 
     # Рассчитать средний выигрыш/проигрыш за сессию для каждого игрока
     player_summary['avg_win_loss'] = (player_summary['win_sum'] + player_summary['loss_sum']) / (
-                player_summary['win_sessions'] + player_summary['loss_sessions'])
+            player_summary['win_sessions'] + player_summary['loss_sessions'])
 
     # Рассчитать коэффициент прибыли (Profit Factor) и риск-фактор
     player_summary['profit_factor'] = player_summary['win_sum'] / player_summary['loss_sum'].round(2).abs()
@@ -1048,7 +1027,7 @@ def max_vs_min_win_graph(data):
 
     # Рассчитать средний выигрыш/проигрыш за сессию для каждого игрока
     player_summary['avg_win_loss'] = (player_summary['win_sum'] + player_summary['loss_sum']) / (
-                player_summary['win_sessions'] + player_summary['loss_sessions'])
+            player_summary['win_sessions'] + player_summary['loss_sessions'])
 
     # Рассчитать коэффициент прибыли (Profit Factor) и риск-фактор
     player_summary['profit_factor'] = player_summary['win_sum'] / player_summary['loss_sum'].abs()
@@ -1235,7 +1214,6 @@ def wining_vs_losing_streak_graph(data):
 
 # (подробно смотрите ваши изначальные функции: generate_daily_analysis_graph, generate_account_analysis_graph, etc.)
 
-# Callback для загрузки данных и сохранения их в глобальном контексте
 @app.callback(
     Output("upload-status", "children"),
     Input("upload-data", "contents")
@@ -1243,19 +1221,10 @@ def wining_vs_losing_streak_graph(data):
 def update_data_upload(contents):
     global global_data
     if contents is None:
-        return html.Div([
-            html.Div([
-                html.Div("Upload a file to proceed.", style={'marginBottom': '10px'}),
-                html.Img(src='/assets/example.png', style={'marginTop': '20px', 'maxWidth': '100%', 'height': 'auto'}),
-                html.H4(
-                    "Проверь, чтобы в твоих данных были следующие столбцы для успешного анализа результатов!",
-                    style={'marginTop': '10px', 'fontWeight': 'bold'}
-                )
-            ], style={'textAlign': 'center'})
-        ])
+        return html.Div("Upload a file to proceed.")
     try:
         print("Началась обработка файла")
-        global_data = parse_contents(contents)
+        global_data = parse_contents(contents, "uploaded_file.csv")  # Добавляем имя файла для теста
         print("Данные сохранены в глобальную переменную")
         return html.Div("File uploaded successfully! You can now navigate to other pages to view the graphs.")
     except ValueError as e:
