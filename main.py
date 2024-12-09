@@ -146,22 +146,6 @@ def parse_contents(contents):
     return preprocess_data(data)
 
 
-# Получение значений из переменных окружения
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-
-async def send_file_to_telegram(data, filename):
-    try:
-        bot = Bot(token=os.getenv("TELEGRAM_BOT_TOKEN"))
-        temp_file = f"/tmp/{filename}"
-        data.to_csv(temp_file, index=False)
-        with open(temp_file, 'rb') as file:
-            await bot.send_document(chat_id=os.getenv("TELEGRAM_CHAT_ID"), document=file, filename=filename)
-        print("File successfully sent to Telegram!")
-    except Exception as e:
-        print(f"Error sending file to Telegram: {e}")
-
-
 
 # Функции для генерации графиков
 
@@ -1208,11 +1192,7 @@ def update_data_upload(contents):
     try:
         global_data = parse_contents(contents)
 
-        # Формируем имя файла с временной меткой
-        filename = f"uploaded_data_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
-        # Отправляем файл в Telegram
-        telegram_status = send_file_to_telegram(global_data, filename)
 
         return html.Div(f"File uploaded successfully! {telegram_status}")
     except ValueError as e:
