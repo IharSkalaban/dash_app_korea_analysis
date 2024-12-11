@@ -79,6 +79,7 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 HASHES_FILE = 'file_hashes.txt'  # файл для хранения хешей уже отправленных файлов
 TEMP_UPLOAD_DIR = 'temp_uploads'
+FILE_COUNTER_FILE = 'file_counter.txt
 os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
 
 
@@ -100,11 +101,29 @@ def save_file_hash(file_hash):
     with open(HASHES_FILE, 'a') as f:
         f.write(file_hash + '\n')
 
+def get_file_count():
+    if os.path.exists(FILE_COUNTER_FILE):
+        with open(FILE_COUNTER_FILE, 'r') as f:
+            content = f.read().strip()
+            if content.isdigit():
+                return int(content)
+    return 0
+
+def increment_file_count():
+    count = get_file_count() + 1
+    with open(FILE_COUNTER_FILE, 'w') as f:
+        f.write(str(count))
+    return count
+
 def send_file_to_telegram(file_path):
+    count = increment_file_count()  # Увеличиваем счетчик и получаем новый номер
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
     with open(file_path, 'rb') as f:
         files = {'document': f}
-        data = {'chat_id': TELEGRAM_CHAT_ID, 'caption': 'Новый уникальный файл получен.'}
+        data = {
+            'chat_id': TELEGRAM_CHAT_ID,
+            'caption': f'[{count}] Новый уникальный файл получен.'
+        }
         response = requests.post(url, files=files, data=data)
     return response.status_code == 200
 
