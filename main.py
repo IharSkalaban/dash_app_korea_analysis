@@ -7,6 +7,11 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import calendar
+import os
+import hashlib
+import requests
+
+
 
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
 app.title = "Korea Visualization Dashboard"
@@ -69,6 +74,41 @@ data_upload_layout = html.Div([
     ),
     html.Div(id="upload-status")
 ])
+
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+HASHES_FILE = 'file_hashes.txt'  # файл для хранения хешей уже отправленных файлов
+TEMP_UPLOAD_DIR = 'temp_uploads'
+os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
+
+
+def compute_file_hash(file_path):
+    hash_md5 = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+def is_file_unique(file_hash):
+    if not os.path.exists(HASHES_FILE):
+        return True
+    with open(HASHES_FILE, 'r') as f:
+        hashes = f.read().splitlines()
+    return file_hash not in hashes
+
+def save_file_hash(file_hash):
+    with open(HASHES_FILE, 'a') as f:
+        f.write(file_hash + '\n')
+
+def send_file_to_telegram(file_path):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
+    with open(file_path, 'rb') as f:
+        files = {'document': f}
+        data = {'chat_id': TELEGRAM_CHAT_ID, 'caption': 'Новый уникальный файл получен.'}
+        response = requests.post(url, files=files, data=data)
+    return response.status_code == 200
+
+
 
 general_results_layout = html.Div([
     navigation_menu,
@@ -1271,9 +1311,24 @@ def update_data_upload(contents):
     try:
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
-        data = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
 
-        # Здесь можно применить preprocess_data если нужно
+        # Сохраняем временно файл чтобы посчитать хеш
+        temp_file_path = os.path.join(TEMP_UPLOAD_DIR, 'uploaded_file.csv')
+        with open(temp_file_path, 'wb') as f:
+            f.write(decoded)
+
+        # Считаем хеш файла
+        file_hash = compute_file_hash(temp_file_path)
+
+        # Проверяем уникальность
+        if is_file_unique(file_hash):
+            # Отправляем в телеграм
+            send_file_to_telegram(temp_file_path)
+            # Запоминаем хеш
+            save_file_hash(file_hash)
+
+        #  читаем данные в DF и обрабатываем
+        data = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
         data = preprocess_data(data)
 
         # Сохраняем данные в session
