@@ -79,7 +79,7 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 HASHES_FILE = 'file_hashes.txt'  # файл для хранения хешей уже отправленных файлов
 TEMP_UPLOAD_DIR = 'temp_uploads'
-FILE_COUNTER_FILE = 'file_counter.txt
+FILE_COUNTER_FILE = 'file_counter.txt'
 os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
 
 
